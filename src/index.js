@@ -47,6 +47,7 @@ class PolygonAdapter {
 		}else{
 			setInterval( this.onInterval.bind( this ), POLL_INTERVAL * 1000 )
 		}
+		console.log('running callback?')
 		cb()
 	}
 
@@ -59,7 +60,7 @@ class PolygonAdapter {
 		let now = Date.now()
 		console.log("SUBSCRIPTIONS",this.subscriptions)
 		Each( this.subscriptions, ( sub ) => {
-			this.getBars( sub.symbolInfo, sub.interval, {from : ( ( now - 60*1000 ) / 1000 ), to :( now / 1000 )}, ( ticks ) => {
+			this.getBars( sub.symbolInfo, sub.interval, {from : Math.round( ( now - 120*1000 ) / 1000 ), to :( ( now ) / 1000 )}, ( ticks ) => {
 				if( ticks.length == 0 ) return
 				sub.callback( ticks )
 			})
@@ -105,7 +106,6 @@ class PolygonAdapter {
 	 *  @return {null}
 	 */
 	resolveSymbol( symbol, cb, cberr ){
-		console.log('resolve symbol:', symbol)
 		let TickerTypeMap = {
 			'STOCKS': 'stock',
 			'FX': 'forex',
@@ -181,12 +181,19 @@ class PolygonAdapter {
 					volume: t.v,
 				}
 			})
-			return onHistoryCallback(bars, {noData: false, nextTime: nextTime })
+			if (firstDataRequest) {
+				// console.log("failing here", bars)
+				return onHistoryCallback(bars, {
+					noData: false,
+					nextTime: bars.length === 0 && timespan != "minute" && nextTime
+				})
+			}
+			return onHistoryCallback(bars.length ? bars : bars[bars.length - 1])
 		}).catch(onErrorCallback)
 
 	}
 
-	
+
 	/**
 	 *  Subscribe to future updates for this symbol
 	 *  @param  {Object}   symbolInfo Object returned from `resolveSymbol`
@@ -195,12 +202,12 @@ class PolygonAdapter {
 	 *  @param  {String}   key        Unique key for this subscription
 	 *  @return {null}
 	 */
-	subscribeBars( symbolInfo, interval, cb, key ){
+	subscribeBars( symbolInfo, interval, onRealTimeCallback, key ){
 		let sub = {
 			key: `${key}`,
 			symbolInfo: symbolInfo,
 			interval: interval,
-			callback: cb,
+			callback: onRealTimeCallback,
 		}
 		// Currently only allow minute subscriptions:
 		if( sub.interval != '1' ) return
@@ -208,7 +215,7 @@ class PolygonAdapter {
 		this.subscriptions.push( sub )
 	}
 
-	
+
 	/**
 	 *  Unsubscribe from future updates for a symbol
 	 *  @param  {String} key Unique key for this subscription
