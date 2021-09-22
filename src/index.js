@@ -41,13 +41,11 @@ class PolygonAdapter {
 	 *  @return {null}
 	 */
 	onReady( cb ){
-		console.log('Polygon Adapter Ready')
 		if( this.realtimeEnabled ){
 			this.wsListeners()
 		}else{
 			setInterval( this.onInterval.bind( this ), POLL_INTERVAL * 1000 )
 		}
-		console.log('running callback?')
 		cb()
 	}
 
@@ -58,7 +56,6 @@ class PolygonAdapter {
 	 */
 	onInterval(){
 		let now = Date.now()
-		console.log("SUBSCRIPTIONS",this.subscriptions)
 		Each( this.subscriptions, ( sub ) => {
 			this.getBars( sub.symbolInfo, sub.interval, {from : Math.round( ( now - 120*1000 ) / 1000 ), to :( ( now ) / 1000 )}, ( ticks ) => {
 				if( ticks.length == 0 ) return
@@ -112,7 +109,6 @@ class PolygonAdapter {
 			'CRYPTO': 'bitcoin',
 		}
 		axios.get(`${BASE_URL}/v3/reference/tickers?ticker=${symbol}&active=true&sort=ticker&order=asc&limit=10&apiKey=${this.apikey}`).then(( data ) => {
-			console.log('DATAAA', data)
 			let c = Get( data, 'data.results', {} )
 			let intFirst = false
 			let dayFirst = false
@@ -162,12 +158,10 @@ class PolygonAdapter {
 			timespan = 'hour'
 			multiplier = parseInt( resolution ) / 60
 		}
-		console.log("URL", `${BASE_URL}/v2/aggs/ticker/${symbolInfo.ticker}/range/${multiplier}/${timespan}/${from*1000}/${to*1000}`)
 		axios({
 			url: `${BASE_URL}/v2/aggs/ticker/${symbolInfo.ticker}/range/${multiplier}/${timespan}/${from*1000}/${to*1000}`,
 			params: { apikey: this.apikey }
 		}).then(( data ) => {
-			console.log("BARS", data.data.results)
 			let bars = []
 			let nextTime = null;
 			bars = Map( data.data.results, ( t ) => {
@@ -182,7 +176,6 @@ class PolygonAdapter {
 				}
 			})
 			if (firstDataRequest) {
-				// console.log("failing here", bars)
 				return onHistoryCallback(bars, {
 					noData: false,
 					nextTime: bars.length === 0 && timespan != "minute" && nextTime
